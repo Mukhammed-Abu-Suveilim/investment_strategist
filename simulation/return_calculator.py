@@ -14,7 +14,11 @@ from data.database import get_session
 from data.models import Asset, Strategy, StrategyAllocation
 from simulation.portfolio_calculator import calculate_portfolio_returns
 from simulation.rolling_returns import calculate_rolling_returns, years_to_trading_days
-from simulation.scenario_analysis import calculate_metrics, calculate_scenarios
+from simulation.scenario_analysis import (
+    calculate_detailed_metrics,
+    calculate_metrics,
+    calculate_scenarios,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -251,6 +255,17 @@ def calculate_strategy_returns(
         expected_1y_final_value,
     ) = _calculate_expected_1y_values(one_year_returns, initial_amount)
 
+    selected_period_detailed_metrics = calculate_detailed_metrics(
+        returns_list=selected_period_returns,
+        wealth_series=growth_df["price"].tolist(),
+        drawdown_window_days=selected_window_days,
+    )
+    one_year_detailed_metrics = calculate_detailed_metrics(
+        returns_list=one_year_returns,
+        wealth_series=growth_df["price"].tolist(),
+        drawdown_window_days=one_year_window_days,
+    )
+
     historical_full_period_final_value = float(initial_amount * float(growth.iloc[-1]))
     growth_chart_data = [
         {
@@ -273,6 +288,9 @@ def calculate_strategy_returns(
         "expected_1y_return": expected_1y_return,
         "expected_1y_final_value": expected_1y_final_value,
         "metrics": metrics,
+        "selected_period_detailed_metrics": selected_period_detailed_metrics,
+        "detailed_metrics": selected_period_detailed_metrics,
+        "one_year_detailed_metrics": one_year_detailed_metrics,
         "historical_full_period_final_value": historical_full_period_final_value,
         "growth_chart_data": growth_chart_data,
     }

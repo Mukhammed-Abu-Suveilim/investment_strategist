@@ -1,59 +1,195 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Investment Strategist</title>
+    <title>Investment Strategist | Анализ инвестиционных стратегий</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 </head>
 <body>
+    <div class="theme-toggle">
+        <button id="theme-toggle-btn" type="button" aria-label="Переключить тему">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
+
     <main class="container">
         <header class="header">
-            <h1>Investment Strategy Simulator</h1>
-            <p>Compare historical performance across strategies with scenario insights.</p>
+            <div class="header-content">
+                <h1>
+                    <i class="fas fa-chart-line"></i>
+                    Investment Strategist
+                </h1>
+                <p class="subtitle">
+                    <i class="fas fa-history"></i>
+                    Сравнение инвестиционных стратегий на исторических данных с учетом сценариев доходности
+                </p>
+            </div>
         </header>
 
-        <section class="controls card">
-            <div class="field">
-                <label for="amount">Investment Amount (RUB)</label>
-                <input id="amount" type="number" min="1000" step="1000" value="100000" />
-            </div>
+        <div class="controls-grid">
+            <section class="card params-card" aria-label="Параметры симуляции">
+                <h2><i class="fas fa-sliders-h"></i> Параметры инвестиций</h2>
 
-            <div class="field">
-                <label for="period-years">Investment Period: <span id="period-label">10</span> years</label>
-                <input id="period-years" type="range" min="1" max="30" value="10" />
-            </div>
+                <div class="field-group">
+                    <div class="field">
+                        <label for="amount">
+                            <i class="fas fa-ruble-sign"></i>
+                            Сумма инвестиций
+                        </label>
+                        <div class="input-wrapper">
+                            <input
+                                id="amount"
+                                type="number"
+                                min="1000"
+                                max="1000000000"
+                                step="1000"
+                                value="100000"
+                                placeholder="100000"
+                            />
+                            <span class="input-suffix">₽</span>
+                        </div>
+                    </div>
 
-            <div class="field">
-                <label for="strategies">Strategies</label>
-                <select id="strategies" multiple size="6"></select>
-                <small>Hold Ctrl (Windows) or Cmd (Mac) to choose multiple strategies.</small>
-            </div>
+                    <div class="field">
+                        <label for="period-years">
+                            <i class="fas fa-calendar-alt"></i>
+                            Срок инвестирования: <span id="period-label" class="period-value">10</span> лет
+                        </label>
+                        <div class="slider-container">
+                            <input
+                                id="period-years"
+                                class="slider"
+                                type="range"
+                                min="1"
+                                max="30"
+                                value="10"
+                            />
+                            <div class="slider-labels">
+                                <span>1 год</span>
+                                <span>15 лет</span>
+                                <span>30 лет</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-            <button id="compare-btn" type="button">Compare</button>
-            <p id="status-message" class="status"></p>
-        </section>
+                <div class="field">
+                    <label for="date-start">
+                        <i class="fas fa-calendar-range"></i>
+                        Период для графика: <span id="date-range-label">2000-2026</span>
+                    </label>
+                    <div class="dual-slider-container">
+                        <div id="slider-track" class="slider-track"></div>
+                        <input
+                            id="date-start"
+                            class="range-slider range-start"
+                            type="range"
+                            min="2000"
+                            max="2026"
+                            value="2000"
+                            step="1"
+                        />
+                        <input
+                            id="date-end"
+                            class="range-slider range-end"
+                            type="range"
+                            min="2000"
+                            max="2026"
+                            value="2026"
+                            step="1"
+                        />
+                    </div>
+                    <div class="slider-labels">
+                        <span id="min-date-label">2000</span>
+                        <span id="max-date-label">2026</span>
+                    </div>
+                    <small class="field-hint">Выберите период для отображения на графике</small>
+                </div>
 
-        <section class="chart-section card">
-            <h2>Growth Comparison</h2>
-            <canvas id="growth-chart" height="120"></canvas>
-        </section>
+                <div class="field">
+                    <label for="strategies-dropdown">
+                        <i class="fas fa-chart-line"></i>
+                        Инвестиционные стратегии
+                    </label>
+                    <div class="multiselect-wrapper">
+                        <div id="strategies-dropdown" class="multiselect">
+                            <button class="multiselect-trigger" type="button" aria-expanded="false">
+                                <span class="selected-count">Выберите стратегии</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div id="strategies-options" class="multiselect-options"></div>
+                        </div>
+                    </div>
+                    <small class="field-hint">Можно выбрать несколько стратегий для сравнения</small>
+                </div>
 
-        <section class="results card">
-            <h2>Simulation Results</h2>
-            <table id="results-table">
-                <thead>
-                    <tr>
-                        <th>Strategy</th>
-                        <th id="expected-value-header">Expected Value in 10 Years (RUB)</th>
-                        <th id="worst-header">10Y Worst (5%)</th>
-                        <th id="median-header">10Y Median (50%)</th>
-                        <th id="best-header">10Y Best (95%)</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+                <button id="compare-btn" class="btn-primary" type="button">
+                    <i class="fas fa-calculator"></i>
+                    Рассчитать
+                </button>
+
+                <p id="status-message" class="status-message" aria-live="polite"></p>
+            </section>
+
+            <section id="results-card" class="card results-card" style="display: none;" aria-label="Результаты симуляции">
+                <div class="results-header">
+                    <h2><i class="fas fa-chart-pie"></i> Результаты симуляции</h2>
+                    <div class="results-actions">
+                        <label for="export-format" class="export-format-label">Формат:</label>
+                        <select id="export-format" class="export-format" aria-label="Выберите формат экспорта">
+                            <option value="csv">CSV (UTF-8)</option>
+                            <option value="xlsx">Excel (.xlsx)</option>
+                        </select>
+                        <button id="export-results" class="btn-icon export-btn" type="button" title="Экспорт результатов">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="strategy-cards" class="strategy-cards"></div>
+
+                <div class="chart-container">
+                    <h3><i class="fas fa-chart-line"></i> Рост инвестиций</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="growth-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <h3><i class="fas fa-table"></i> Ключевые результаты</h3>
+                    <table id="results-table" class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Стратегия</th>
+                                <th id="expected-value-header">Ожидаемая стоимость за 10 лет</th>
+                                <th id="worst-header">10Y Худший (5%)</th>
+                                <th id="median-header">10Y Медиана (50%)</th>
+                                <th id="best-header">10Y Лучший (95%)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <section class="disclaimer" aria-label="Дисклеймер">
+            <i class="fas fa-info-circle"></i>
+            <p>
+                Важно: Историческая доходность не гарантирует будущих результатов. Реальные инвестиции связаны
+                с рисками. Данный инструмент предназначен только для образовательных целей и не является
+                инвестиционной рекомендацией.
+            </p>
         </section>
     </main>
 

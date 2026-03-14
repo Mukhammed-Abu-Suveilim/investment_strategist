@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import math
+from typing import Sequence
 
 import numpy as np
+import pandas as pd
+from numpy.typing import NDArray
 
 from config import settings
 
@@ -68,4 +71,124 @@ def calculate_metrics(returns_list: list[float]) -> dict[str, float]:
         "min": min_value,
         "max": max_value,
         "sharpe_ratio": sharpe_ratio,
+    }
+
+
+def _to_numeric_array(values: Sequence[float]) -> NDArray[np.float64]:
+    """Normalize an input sequence into finite ``float`` NumPy array.
+
+    Args:
+        values: Numeric values sequence.
+
+    Returns:
+        Array filtered to finite values.
+    """
+
+    normalized = np.asarray(list(values), dtype=np.float64)
+    if normalized.size == 0:
+        return normalized
+
+    finite_values = [
+        float(value) for value in normalized.tolist() if np.isfinite(value)
+    ]
+    return np.asarray(finite_values, dtype=np.float64)
+
+
+def calculate_max_drawdown(
+    wealth_series: Sequence[float],
+    window_days: int | None = None,
+) -> float:
+    """Calculate maximum drawdown for a wealth path.
+
+    Args:
+        wealth_series: Portfolio wealth/index level values.
+        window_days: Optional drawdown lookback in trading days. If omitted,
+            calculates drawdown against running all-time peak.
+
+    Returns:
+        Maximum drawdown as a negative decimal value.
+    """
+
+    values = _to_numeric_array(wealth_series)
+    if values.size < 2:
+        return 0.0
+
+    positive_mask = values > 0.0
+    values = values[positive_mask]
+    if values.size < 2:
+        return 0.0
+
+    if window_days is not None and window_days > 0:
+        rolling_peaks = (
+            pd.Series(values)
+            .rolling(window=window_days, min_periods=1)
+            .max()
+            .to_numpy()
+        )
+    else:
+        rolling_peaks = np.maximum.accumulate(values)
+
+    drawdowns = values / rolling_peaks - 1.0
+    return float(np.min(drawdowns))
+
+
+def calculate_detailed_metrics(
+    returns_list: list[float],
+    wealth_series: Sequence[float] | None = None,
+    drawdown_window_days: int | None = None,
+) -> dict[str, float]:
+    """Calculate detailed risk and reliability metrics.
+
+    Args:
+        returns_list: Return observations for the selected horizon.
+        wealth_series: Optional wealth path used for max drawdown calculation.
+        drawdown_window_days: Optional drawdown lookback window in trading days.
+
+    Returns:
+        Dictionary with volatility, max_drawdown, VaR/CVaR, profit probability,
+        and Omega ratio.
+    """
+
+    values = _to_numeric_array(returns_list)
+
+    if values.size == 0:
+        max_drawdown = (
+            calculate_max_drawdown(wealth_series, drawdown_window_days)
+            if wealth_series is not None
+            else 0.0
+        )
+        return {
+            "volatility": 0.0,
+            "max_drawdown": max_drawdown,
+            "var95": 0.0,
+            "cvar95": 0.0,
+            "probability_of_profit": 0.0,
+            "omega_ratio": 0.0,
+        }
+
+    volatility = float(np.std(values, ddof=0))
+    var95 = float(np.percentile(values, 5))
+
+    tail_losses = values[values <= var95]
+    cvar95 = float(np.mean(tail_losses)) if tail_losses.size > 0 else var95
+
+    probability_of_profit = float(np.mean(values > 0.0))
+
+    gains = float(np.sum(values[values > 0.0]))
+    losses_abs = float(abs(np.sum(values[values < 0.0])))
+    omega_ratio = gains / losses_abs if losses_abs > 0 else 0.0
+
+    max_drawdown = (
+        calculate_max_drawdown(wealth_series, drawdown_window_days)
+        if wealth_series is not None
+        else 0.0
+    )
+
+    return {
+        "volatility": volatility,
+        "max_drawdown": max_drawdown,
+        "var95": var95,
+        "cvar95": cvar95,
+        "probability_of_profit": probability_of_profit,
+        "omega_ratio": float(omega_ratio),
     }
