@@ -1,0 +1,28 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Python files
+*.py text diff=python
+*.pyw text diff=python
+
+# Shell scripts should always use LF line endings
+*.sh text eol=lf
+
+# Batch files should use CRLF
+*.bat text eol=crlf
+
+# Dockerfiles
+Dockerfile text
+*.dockerfile text
+
+# Markdown and text files
+*.md text
+*.txt text
+*.yml text
+*.yaml text
+*.json text
+*.toml text
+
+# Lock files - binary
+*.lock binary
+uv.lock binary
