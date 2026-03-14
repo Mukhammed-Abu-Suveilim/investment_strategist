@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+
+# Local config
+.env
+
+# Databases and data artifacts
+*.db
+*.sqlite
+*.sqlite3
+data/*.csv
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+
+# Logs
+*.log
+logs/
+
+# Notebooks (if any)
+*.ipynb
+.ipynb_checkpoints/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# Docker
+*.pid
+.DS_Store?
+
+# Testing outputs
+test_outputs/
+coverage/
+*.cover
+.hypothesis/
+
+# Distribution
+dist/
+build/
+*.egg
+EOF

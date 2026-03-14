@@ -1,0 +1,66 @@
+[project]
+name = "investment-strategist"
+version = "0.1.0"
+description = "Flask-based investment strategy simulation tool with ETL and scenario analysis"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "flask>=3.0.0",
+    "flask-cors>=5.0.0",
+    "sqlalchemy>=2.0.30",
+    "pandas>=2.2.0",
+    "numpy>=1.26.0",
+    "yfinance>=0.2.54",
+    "apimoex>=1.4.0",
+    "requests>=2.32.0",
+    "python-dotenv>=1.0.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "black>=24.8.0",
+    "isort>=5.13.0",
+    "mypy>=1.11.0",
+    "types-requests>=2.32.0.20250301",
+    "pandas-stubs>=2.2.2.240909",
+]
+
+[project.scripts]
+check-env = "scripts.check_env:main"
+etl = "etl.pipeline.master_pipeline:main"
+server = "app:main"
+seed = "data.data_loader:main"
+test = "scripts.run_tests:main"
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+extend-exclude = "(^tests/|^investment_strategist/|^\\.venv/|^venv/)"
+
+[tool.isort]
+profile = "black"
+line_length = 88
+skip = ["investment_strategist", ".venv", "venv", "tests"]
+skip_glob = ["investment_strategist/**", ".venv/**", "venv/**", "tests/**"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+no_implicit_optional = true
+check_untyped_defs = true
+show_error_codes = true
+pretty = true
+exclude = "(^tests/|^investment_strategist/|^\\.venv/|^venv/)"
+
+[[tool.mypy.overrides]]
+module = ["yfinance"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-q"

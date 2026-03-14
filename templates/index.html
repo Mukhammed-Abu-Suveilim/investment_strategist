@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Investment Strategist</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <main class="container">
+        <header class="header">
+            <h1>Investment Strategy Simulator</h1>
+            <p>Compare historical performance across strategies with scenario insights.</p>
+        </header>
+
+        <section class="controls card">
+            <div class="field">
+                <label for="amount">Investment Amount (RUB)</label>
+                <input id="amount" type="number" min="1000" step="1000" value="100000" />
+            </div>
+
+            <div class="field">
+                <label for="period-years">Investment Period: <span id="period-label">10</span> years</label>
+                <input id="period-years" type="range" min="1" max="30" value="10" />
+            </div>
+
+            <div class="field">
+                <label for="strategies">Strategies</label>
+                <select id="strategies" multiple size="6"></select>
+                <small>Hold Ctrl (Windows) or Cmd (Mac) to choose multiple strategies.</small>
+            </div>
+
+            <button id="compare-btn" type="button">Compare</button>
+            <p id="status-message" class="status"></p>
+        </section>
+
+        <section class="chart-section card">
+            <h2>Growth Comparison</h2>
+            <canvas id="growth-chart" height="120"></canvas>
+        </section>
+
+        <section class="results card">
+            <h2>Simulation Results</h2>
+            <table id="results-table">
+                <thead>
+                    <tr>
+                        <th>Strategy</th>
+                        <th id="expected-value-header">Expected Value in 10 Years (RUB)</th>
+                        <th id="worst-header">10Y Worst (5%)</th>
+                        <th id="median-header">10Y Median (50%)</th>
+                        <th id="best-header">10Y Best (95%)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

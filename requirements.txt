@@ -1,0 +1,15 @@
+flask>=3.0.0
+flask-cors>=5.0.0
+sqlalchemy>=2.0.30
+pandas>=2.2.0
+numpy>=1.26.0
+yfinance>=0.2.54
+apimoex>=1.4.0
+requests>=2.32.0
+python-dotenv>=1.0.1
+pytest>=8.3.0
+black>=24.8.0
+isort>=5.13.0
+mypy>=1.11.0
+types-requests>=2.32.0.20250301
+pandas-stubs>=2.2.2.240909
