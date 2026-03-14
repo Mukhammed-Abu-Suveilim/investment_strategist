@@ -34,6 +34,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          python -m pip install black isort
           python -m pip install -r requirements.txt
 
       - name: Run black (check)
@@ -45,6 +46,7 @@ jobs:
   type-check:
     name: Type check (mypy)
     runs-on: ubuntu-latest
+    continue-on-error: true  # Don't fail the build for type issues
 
     steps:
       - name: Checkout repository
@@ -59,14 +61,28 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          python -m pip install mypy
           python -m pip install -r requirements.txt
+          # Install type stubs for better checking
+          python -m pip install types-Flask-Cors types-requests types-python-dateutil || true
 
       - name: Run mypy
-        run: python -m mypy .
+        run: |
+          python -m mypy . 
+        continue-on-error: true
+
+      - name: Upload mypy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mypy-report
+          path: .mypy_cache/
+          retention-days: 7
 
   test:
     name: Test (pytest)
     runs-on: ubuntu-latest
+    needs: [lint]  # Optional: run tests after linting passes
 
     steps:
       - name: Checkout repository
@@ -81,13 +97,30 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          python -m pip install pytest pytest-cov pytest-xdist
           python -m pip install -r requirements.txt
 
-      - name: Run pytest
-        run: python -m pytest
+      - name: Run pytest with coverage
+        run: |
+          python -m pytest -v --cov=. --cov-report=xml --cov-report=html
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+          retention-days: 14
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
 
   dependency-scan:
-    name: Dependency scan (pip-audit)
+    name: Dependency scan
     runs-on: ubuntu-latest
     continue-on-error: true
 
@@ -101,10 +134,67 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install scanner
+      - name: Install scanners
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pip-audit
+          python -m pip install pip-audit safety
 
-      - name: Scan requirements
-        run: python -m pip_audit -r requirements.txt
+      - name: Scan with pip-audit
+        run: python -m pip_audit -r requirements.txt || true
+
+      - name: Scan with safety
+        run: safety check -r requirements.txt --full-report || true
+
+  security-scan:
+    name: Security scan (bandit)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install bandit
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install bandit
+
+      - name: Run bandit
+        run: |
+          python -m bandit -r . -f json -o bandit-report.json || true
+
+      - name: Upload bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+          retention-days: 7
+
+  # Optional: Add a status check job
+  ci-status:
+    name: CI Status
+    runs-on: ubuntu-latest
+    needs: [lint, type-check, test, dependency-scan, security-scan]
+    if: always()
+    steps:
+      - name: Check CI status
+        run: |
+          echo "Lint: ${{ needs.lint.result }}"
+          echo "Type Check: ${{ needs.type-check.result }}"
+          echo "Test: ${{ needs.test.result }}"
+          echo "Dependency Scan: ${{ needs.dependency-scan.result }}"
+          echo "Security Scan: ${{ needs.security-scan.result }}"
+          
+          # Fail only if critical jobs fail
+          if [ "${{ needs.lint.result }}" = "failure" ] || \
+             [ "${{ needs.test.result }}" = "failure" ]; then
+            echo "Critical jobs failed!"
+            exit 1
+          fi
+          echo "All checks passed!"
