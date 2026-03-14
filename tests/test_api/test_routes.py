@@ -145,8 +145,30 @@ def test_simulate_endpoint_returns_results(client) -> None:
     assert result["scenarios"] == result["selected_period_scenarios"]
     assert result["historical_full_period_final_value"] > 0
 
-    # With positive trend data and period_years=2, selected-horizon expectation is
-    # distinct from 1-year expectation.
+    # Selected-horizon and one-year expectations should differ for this dataset.
     assert result["expected_selected_period_final_value"] != pytest.approx(
         result["expected_1y_final_value"]
+    )
+
+    # Detailed metrics should be exposed for selected horizon and one-year,
+    # while preserving backward-compatible aliases.
+    detailed_keys = {
+        "volatility",
+        "max_drawdown",
+        "var95",
+        "cvar95",
+        "probability_of_profit",
+        "omega_ratio",
+    }
+
+    assert "selected_period_detailed_metrics" in result
+    assert set(result["selected_period_detailed_metrics"].keys()) == detailed_keys
+    assert "one_year_detailed_metrics" in result
+    assert set(result["one_year_detailed_metrics"].keys()) == detailed_keys
+
+    assert result["detailed_metrics"] == result["selected_period_detailed_metrics"]
+
+    # Horizon-dependent detailed metrics should not be identical across windows.
+    assert result["selected_period_detailed_metrics"]["volatility"] != pytest.approx(
+        result["one_year_detailed_metrics"]["volatility"]
     )

@@ -10,7 +10,12 @@ from simulation.portfolio_calculator import (
     validate_weights,
 )
 from simulation.rolling_returns import calculate_rolling_returns, years_to_trading_days
-from simulation.scenario_analysis import calculate_metrics, calculate_scenarios
+from simulation.scenario_analysis import (
+    calculate_detailed_metrics,
+    calculate_max_drawdown,
+    calculate_metrics,
+    calculate_scenarios,
+)
 
 
 def test_years_to_trading_days_conversion() -> None:
@@ -64,3 +69,35 @@ def test_calculate_scenarios_and_metrics_have_expected_keys() -> None:
 
     assert set(scenarios.keys()) == {"worst", "median", "best"}
     assert set(metrics.keys()) == {"mean", "std_dev", "min", "max", "sharpe_ratio"}
+
+
+def test_calculate_detailed_metrics_returns_expected_values() -> None:
+    """It computes detailed risk and efficiency metrics from returns and wealth."""
+
+    returns_list = [0.10, -0.20, 0.05, -0.05]
+    wealth_series = [1.0, 1.1, 0.9, 1.0, 1.2]
+
+    detailed = calculate_detailed_metrics(
+        returns_list=returns_list,
+        wealth_series=wealth_series,
+    )
+
+    assert detailed["volatility"] == pytest.approx(0.1145643924, rel=1e-9)
+    assert detailed["var95"] == pytest.approx(-0.1775, rel=1e-9)
+    assert detailed["cvar95"] == pytest.approx(-0.20, rel=1e-9)
+    assert detailed["probability_of_profit"] == pytest.approx(0.5, rel=1e-9)
+    assert detailed["omega_ratio"] == pytest.approx(0.6, rel=1e-9)
+    assert detailed["max_drawdown"] == pytest.approx(-0.1818181818, rel=1e-9)
+
+
+def test_calculate_max_drawdown_window_reduces_long_lookback_impact() -> None:
+    """It supports lookback-window drawdown that differs from all-time peak drawdown."""
+
+    wealth_series = [1.0, 10.0, 9.0, 8.0, 7.0, 6.0, 5.0]
+
+    all_time_drawdown = calculate_max_drawdown(wealth_series)
+    short_window_drawdown = calculate_max_drawdown(wealth_series, window_days=2)
+
+    assert all_time_drawdown == pytest.approx(-0.5, rel=1e-9)
+    assert short_window_drawdown == pytest.approx(-1.0 / 6.0, rel=1e-9)
+    assert all_time_drawdown < short_window_drawdown
