@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
     "use strict";
 
     const amountInput = document.getElementById("amount");
@@ -52,6 +52,8 @@
     const selectedStrategies = new Set();
     /** @type {{labels: string[], datasets: Array<object>} | null} */
     let fullChartData = null;
+	/** @type {Array<object>} */
+	let allStrategies = []; // Добавить эту строку
 
     function formatRub(value) {
         const numericValue = Number(value);
@@ -296,19 +298,21 @@
     }
 
     function renderStrategyOptions(strategies) {
-        if (!multiselectOptions) {
-            return;
-        }
+		if (!multiselectOptions) {
+			return;
+		}
 
-        multiselectOptions.innerHTML = "";
-        selectedStrategies.clear();
+		allStrategies = strategies;
 
-        for (const strategy of strategies) {
-            multiselectOptions.appendChild(createOption(strategy));
-        }
+		multiselectOptions.innerHTML = "";
+		selectedStrategies.clear();
 
-        updateSelectedCount();
-    }
+		for (const strategy of strategies) {
+			multiselectOptions.appendChild(createOption(strategy));
+		}
+
+		updateSelectedCount();
+	}
 
     function createStatBlock(iconClass, labelText, percentText, valueText, percentClass = "") {
         const block = document.createElement("div");
@@ -431,59 +435,135 @@
         return cell;
     }
 
-    function renderResultsTable(results, fallbackPeriodYears, initialAmount) {
-        if (!resultsBody) {
-            return;
-        }
+    // Обновленная функция renderResultsTable с новыми метриками
+	function renderResultsTable(results, fallbackPeriodYears, initialAmount) {
+		if (!resultsBody) return;
 
-        resultsBody.innerHTML = "";
+		resultsBody.innerHTML = "";
 
-        const displayedPeriodYears = results.length
-            ? resolveSelectedPeriodYears(results[0], fallbackPeriodYears)
-            : fallbackPeriodYears;
-        updateResultsTableHeaders(displayedPeriodYears);
+		const displayedPeriodYears = results.length
+			? resolveSelectedPeriodYears(results[0], fallbackPeriodYears)
+			: fallbackPeriodYears;
+		updateResultsTableHeaders(displayedPeriodYears);
 
-        for (const result of results) {
-            const scenarios = resolveSelectedPeriodScenarios(result);
-            const expectedValue = resolveExpectedValue(result);
+		// Обновляем заголовки таблицы для новых метрик
+		updateTableHeadersWithMetrics(displayedPeriodYears);
 
-            const row = document.createElement("tr");
+		for (const result of results) {
+			const scenarios = resolveSelectedPeriodScenarios(result);
+			const expectedValue = resolveExpectedValue(result);
+			
+			// Рассчитываем новые метрики
+			const metrics = result.detailed_metrics || {};
+			
+			const row = document.createElement("tr");
 
-            const strategyCell = document.createElement("td");
-            strategyCell.className = "strategy-name";
-            strategyCell.textContent = result.strategy_name;
+			const strategyCell = document.createElement("td");
+			strategyCell.className = "strategy-name";
+			strategyCell.textContent = result.strategy_name;
 
-            const expectedCell = document.createElement("td");
-            expectedCell.className = expectedValue >= initialAmount ? "positive" : "negative";
-            expectedCell.textContent = formatRub(expectedValue);
+			const expectedCell = document.createElement("td");
+			expectedCell.className = expectedValue >= initialAmount ? "positive" : "negative";
+			expectedCell.textContent = formatRub(expectedValue);
 
-            row.append(strategyCell, expectedCell);
+			row.append(strategyCell, expectedCell);
 
-            if (scenarios) {
-                const worstValue = initialAmount * (1 + Number(scenarios.worst));
-                const medianValue = initialAmount * (1 + Number(scenarios.median));
-                const bestValue = initialAmount * (1 + Number(scenarios.best));
+			if (scenarios) {
+				const worstValue = initialAmount * (1 + Number(scenarios.worst));
+				const medianValue = initialAmount * (1 + Number(scenarios.median));
+				const bestValue = initialAmount * (1 + Number(scenarios.best));
 
-                row.appendChild(
-                    createScenarioCell(
-                        scenarios.worst,
-                        worstValue,
-                        Number(scenarios.worst) < 0 ? "negative" : "positive",
-                    ),
-                );
-                row.appendChild(createScenarioCell(scenarios.median, medianValue));
-                row.appendChild(createScenarioCell(scenarios.best, bestValue, "positive"));
-            } else {
-                for (let index = 0; index < 3; index += 1) {
-                    const emptyCell = document.createElement("td");
-                    emptyCell.textContent = "—";
-                    row.appendChild(emptyCell);
-                }
-            }
+				row.appendChild(createScenarioCell(scenarios.worst, worstValue, Number(scenarios.worst) < 0 ? "negative" : "positive"));
+				row.appendChild(createScenarioCell(scenarios.median, medianValue));
+				row.appendChild(createScenarioCell(scenarios.best, bestValue, "positive"));
+			}
 
-            resultsBody.appendChild(row);
-        }
-    }
+			const basicMetrics = result.metrics || {};
+
+			row.appendChild(createMetricsCell(metrics.volatility, "volatility"));
+			row.appendChild(createMetricsCell(metrics.max_drawdown, "maxDrawdown", true));
+			row.appendChild(createMetricsCell(basicMetrics.sharpe_ratio, "sharpe"));
+			row.appendChild(createMetricsCell(metrics.probability_of_profit, "probability"));
+			row.appendChild(createMetricsCell(metrics.omega_ratio, "omega"));
+
+			resultsBody.appendChild(row);
+		}
+	}
+
+	/**
+	 * Обновление заголовков таблицы с новыми метриками
+	 */
+	function updateTableHeadersWithMetrics(periodYears) {
+		const headerRow = document.querySelector("#results-table thead tr");
+		if (!headerRow) return;
+
+		// Очищаем существующие заголовки после первых 5
+		while (headerRow.children.length > 5) {
+			headerRow.removeChild(headerRow.lastChild);
+		}
+
+		// Добавляем новые заголовки
+		const newHeaders = [
+			"Волатильность",
+			"Max DD",
+			"Sharpe Ratio",
+			"Win Rate",
+			"Omega Ratio"
+		];
+
+		newHeaders.forEach(header => {
+			const th = document.createElement("th");
+			th.textContent = header;
+			if (header === "Max DD") th.classList.add("negative");
+			if (header === "Sharpe Ratio" || header === "Omega Ratio") th.classList.add("positive");
+			headerRow.appendChild(th);
+		});
+	}
+
+	/**
+	 * Создание ячейки для метрики
+	 */
+	function createMetricsCell(value, metricType, isNegative = false) {
+		const cell = document.createElement("td");
+		
+		if (value === null || value === undefined || !Number.isFinite(value)) {
+			cell.textContent = "—";
+			return cell;
+		}
+		
+		let formattedValue = "";
+		let extraClass = "";
+		
+		switch (metricType) {
+			case "volatility":
+				formattedValue = formatPercent(value);
+				extraClass = value > 0.2 ? "warning" : "";
+				break;
+			case "maxDrawdown":
+				formattedValue = formatPercent(Math.abs(value));
+				extraClass = "negative";
+				break;
+			case "sharpe":
+				formattedValue = value.toFixed(2);
+				extraClass = value > 1 ? "positive" : value < 0 ? "negative" : "";
+				break;
+			case "probability":
+				formattedValue = formatPercent(value);
+				extraClass = value > 0.5 ? "positive" : "";
+				break;
+			case "omega":
+				formattedValue = value.toFixed(2);
+				extraClass = value > 1.5 ? "positive" : value < 1 ? "negative" : "";
+				break;
+			default:
+				formattedValue = String(value);
+		}
+		
+		if (extraClass) cell.classList.add(extraClass);
+		cell.textContent = formattedValue;
+		
+		return cell;
+	}
 
     function filterLabelsByYear(labels, startYear, endYear) {
         return labels.filter((dateString) => {
@@ -969,61 +1049,64 @@
     }
 
     async function runSimulation() {
-        const amount = Number(amountInput?.value);
-        const periodYears = Number(periodInput?.value);
-        const strategyIds = selectedStrategyIds();
+		const amount = Number(amountInput?.value);
+		const periodYears = Number(periodInput?.value);
+		const strategyIds = selectedStrategyIds();
 
-        if (!Number.isFinite(amount) || amount <= 0) {
-            setStatus("Пожалуйста, введите корректную сумму.", "error");
-            return;
-        }
+		if (!Number.isFinite(amount) || amount <= 0) {
+			setStatus("Пожалуйста, введите корректную сумму.", "error");
+			return;
+		}
 
-        if (!Number.isFinite(periodYears) || periodYears <= 0) {
-            setStatus("Пожалуйста, выберите корректный срок инвестирования.", "error");
-            return;
-        }
+		if (!Number.isFinite(periodYears) || periodYears <= 0) {
+			setStatus("Пожалуйста, выберите корректный срок инвестирования.", "error");
+			return;
+		}
 
-        if (!strategyIds.length) {
-            setStatus("Пожалуйста, выберите хотя бы одну стратегию.", "error");
-            return;
-        }
+		if (!strategyIds.length) {
+			setStatus("Пожалуйста, выберите хотя бы одну стратегию.", "error");
+			return;
+		}
 
-        showLoading();
+		// Очищаем секцию рейтинга при новом расчете
+		clearRankingSection();
 
-        try {
-            const payload = await fetchJson("/api/simulate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    amount,
-                    period_years: periodYears,
-                    strategy_ids: strategyIds,
-                }),
-            });
+		showLoading();
 
-            const results = payload.results || [];
-            currentResults = results;
+		try {
+			const payload = await fetchJson("/api/simulate", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					amount,
+					period_years: periodYears,
+					strategy_ids: strategyIds,
+				}),
+			});
 
-            if (results.length && Array.isArray(results[0].growth_chart_data)) {
-                applyDateBoundsFromGrowthData(results[0].growth_chart_data);
-            }
+			const results = payload.results || [];
+			currentResults = results;
 
-            renderStrategyCards(results, amount);
-            renderResultsTable(results, periodYears, amount);
-            renderGrowthChart(results);
+			if (results.length && Array.isArray(results[0].growth_chart_data)) {
+				applyDateBoundsFromGrowthData(results[0].growth_chart_data);
+			}
 
-            if (resultsCard) {
-                resultsCard.style.display = "block";
-                resultsCard.scrollIntoView({ behavior: "smooth", block: "start" });
-            }
+			renderStrategyCards(results, amount);
+			renderResultsTable(results, periodYears, amount);
+			renderGrowthChart(results);
 
-            setStatus("Симуляция успешно завершена.", "success");
-        } catch (error) {
-            setStatus(error.message || "Симуляция не удалась.", "error");
-        } finally {
-            hideLoading();
-        }
-    }
+			if (resultsCard) {
+				resultsCard.style.display = "block";
+				resultsCard.scrollIntoView({ behavior: "smooth", block: "start" });
+			}
+
+			setStatus("Симуляция успешно завершена.", "success");
+		} catch (error) {
+			setStatus(error.message || "Симуляция не удалась.", "error");
+		} finally {
+			hideLoading();
+		}
+	}
 
     function onPeriodChange() {
         const periodYears = Number(periodInput?.value);
@@ -1086,6 +1169,182 @@
     if (resultsCard) {
         resultsCard.style.display = "none";
     }
+	
+	/**
+	 * Очищает секцию с рейтингом стратегий
+	 */
+	function clearRankingSection() {
+		const existingSection = document.querySelector('.ranking-section');
+		if (existingSection) {
+			existingSection.remove();
+		}
+	}
 
     loadStrategies();
+	
+	// ==================== Ranking Functions ====================
+
+	/**
+	 * Ранжирует стратегии по ожидаемой доходности
+	 * @param {Array} results - массив результатов симуляции
+	 * @param {number} initialAmount - начальная сумма
+	 * @returns {Array} - отсортированный массив стратегий
+	 */
+	function rankStrategiesByProfitability(results, initialAmount) {
+		if (!results || !results.length) return [];
+
+		return results
+			.map((result) => ({
+				strategyId: result.strategy_id,
+				strategyName: result.strategy_name,
+				expectedValue: resolveExpectedValue(result),
+				scenarios: resolveSelectedPeriodScenarios(result),
+				totalReturn: (resolveExpectedValue(result) / initialAmount) - 1,
+				cagr: Math.pow(resolveExpectedValue(result) / initialAmount, 1 / (Number(periodInput?.value) || 1)) - 1,
+				sharpeRatio: calculateSharpeRatioFromResult(result),
+				volatility: result.detailed_metrics?.volatility ?? null
+			}))
+			.sort((a, b) => b.expectedValue - a.expectedValue);
+	}
+	
+	/**
+	 * Расчет коэффициента Шарпа из результатов
+	 */
+	function calculateSharpeRatioFromResult(result) {
+		const sharpeRatio = Number(result?.metrics?.sharpe_ratio);
+		return Number.isFinite(sharpeRatio) ? sharpeRatio : null;
+	}
+
+
+	/**
+	 * Создает HTML для отображения ранжированных стратегий
+	 */
+	function renderRankingSection(rankedStrategies) {
+		// Удаляем существующую секцию если есть
+		const existingSection = document.querySelector('.ranking-section');
+		if (existingSection) {
+			existingSection.remove();
+		}
+
+		if (!rankedStrategies.length) return;
+
+		const paramsCard = document.querySelector('.params-card');
+		if (!paramsCard) return;
+
+		const rankingSection = document.createElement('div');
+		rankingSection.className = 'ranking-section';
+		rankingSection.innerHTML = `
+			<h4>
+				<i class="fas fa-trophy"></i>
+				Рейтинг стратегий по ожидаемой доходности
+			</h4>
+			<div class="ranking-list">
+				${rankedStrategies.map((strategy, index) => `
+					<div class="ranking-item">
+						<span class="rank">#${index + 1}</span>
+						<span class="name">${escapeHtml(strategy.strategyName)}</span>
+						<span class="value">${formatRub(strategy.expectedValue)}</span>
+						<span class="badge">+${formatPercent(strategy.totalReturn)}</span>
+					</div>
+				`).join('')}
+			</div>
+			<div class="ranking-footer" style="margin-top: 0.5rem; font-size: 0.65rem; color: var(--text-muted); text-align: center;">
+				<i class="fas fa-chart-line"></i> Ранжирование по ожидаемой финальной стоимости
+			</div>
+		`;
+
+		// Вставляем после кнопок
+		const rankingButtons = document.querySelector('.ranking-buttons');
+		if (rankingButtons) {
+			rankingButtons.parentNode.insertBefore(rankingSection, rankingButtons.nextSibling);
+		} else {
+			paramsCard.appendChild(rankingSection);
+		}
+	}
+
+	/**
+	 * Экранирование HTML специальных символов
+	 */
+	function escapeHtml(str) {
+		if (!str) return '';
+		return str
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	}
+
+	/**
+	 * Запускает симуляцию для всех стратегий и ранжирует их
+	 */
+	async function runRanking() {
+		const amount = Number(amountInput?.value);
+		const periodYears = Number(periodInput?.value);
+
+		if (!Number.isFinite(amount) || amount <= 0) {
+			setStatus("Пожалуйста, введите корректную сумму для ранжирования.", "error");
+			return;
+		}
+
+		if (!Number.isFinite(periodYears) || periodYears <= 0) {
+			setStatus("Пожалуйста, выберите корректный срок инвестирования.", "error");
+			return;
+		}
+
+		// Получаем ID всех доступных стратегий
+		const allStrategyIds = allStrategies.map(s => s.id);
+		if (!allStrategyIds.length) {
+			setStatus("Нет доступных стратегий для ранжирования.", "error");
+			return;
+		}
+
+		setStatus("Анализ всех стратегий...", "info");
+		showLoading();
+
+		try {
+			const payload = await fetchJson("/api/simulate", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					amount,
+					period_years: periodYears,
+					strategy_ids: allStrategyIds,
+				}),
+			});
+
+			const results = payload.results || [];
+			if (!results.length) {
+				setStatus("Не удалось получить результаты симуляции.", "error");
+				return;
+			}
+
+			// Ранжируем стратегии
+			const ranked = rankStrategiesByProfitability(results, amount);
+			
+			// Показываем секцию с ранжированием
+			renderRankingSection(ranked);
+			
+			// Обновляем основной интерфейс
+			currentResults = results;
+			renderStrategyCards(results, amount);
+			renderResultsTable(results, periodYears, amount);
+			renderGrowthChart(results);
+			
+			if (resultsCard) {
+				resultsCard.style.display = "block";
+			}
+			
+			setStatus(`Проанализировано ${ranked.length} стратегий. Лучшая: ${ranked[0]?.strategyName || '—'}`, "success");
+		} catch (error) {
+			setStatus(error.message || "Ошибка при анализе стратегий.", "error");
+		} finally {
+			hideLoading();
+		}
+	}
+
+	// Добавить обработчик кнопки в Event Listeners
+	const rankStrategiesBtn = document.getElementById("rank-strategies-btn");
+	rankStrategiesBtn?.addEventListener("click", runRanking);
+	
 })();
