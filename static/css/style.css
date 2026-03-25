@@ -1467,3 +1467,103 @@ body {
 .hide-scrollbar::-webkit-scrollbar {
     display: none;
 }
+
+/* Кнопки ранжирования */
+.ranking-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.btn-secondary {
+    width: 100%;
+    padding: 0.4rem;
+    background: var(--card);
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    border-radius: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    transition: all 0.3s;
+}
+
+.btn-secondary:hover {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
+}
+
+/* Секция с ранжированными стратегиями */
+.ranking-section {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%);
+    border-radius: 0.6rem;
+    border: 1px solid var(--border);
+    animation: fadeIn 0.3s ease;
+}
+
+.ranking-section h4 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--primary);
+}
+
+.ranking-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.ranking-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.3rem 0.5rem;
+    background: var(--card);
+    border-radius: 0.4rem;
+    border: 1px solid var(--border);
+    font-size: 0.75rem;
+}
+
+.ranking-item .rank {
+    font-weight: 700;
+    color: var(--primary);
+    width: 2rem;
+}
+
+.ranking-item .name {
+    flex: 1;
+    font-weight: 500;
+}
+
+.ranking-item .value {
+    font-weight: 600;
+    color: var(--secondary);
+}
+
+.ranking-item .badge {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.3rem;
+    background: var(--hover);
+    color: var(--text-muted);
+    margin-left: 0.5rem;
+}
+
+.ranking-empty {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    padding: 0.5rem;
+}
