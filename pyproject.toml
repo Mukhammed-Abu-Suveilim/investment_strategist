@@ -22,7 +22,7 @@ dev = [
     "black>=24.8.0",
     "isort>=5.13.0",
     "mypy>=1.11.0",
-    "types-requests>=2.32.0.20250301",
+    "types-requests>=2.33.0.20260408",
     "pandas-stubs>=2.2.2.240909",
 ]
 
