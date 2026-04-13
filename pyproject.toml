@@ -23,7 +23,7 @@ dev = [
     "isort>=5.13.0",
     "mypy>=1.11.0",
     "types-requests>=2.32.0.20250301",
-    "pandas-stubs>=2.2.2.240909",
+    "pandas-stubs>=3.0.0.260204",
 ]
 
 [project.scripts]
