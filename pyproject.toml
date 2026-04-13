@@ -7,7 +7,7 @@ requires-python = ">=3.11"
 dependencies = [
     "flask>=3.0.0",
     "flask-cors>=5.0.0",
-    "sqlalchemy>=2.0.30",
+    "sqlalchemy>=2.0.49",
     "pandas>=2.2.0",
     "numpy>=1.26.0",
     "yfinance>=0.2.54",
